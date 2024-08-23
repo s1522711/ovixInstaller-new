@@ -53,16 +53,21 @@ namespace ovixInstaller
             toolStripStatusLabel1.Text = "Installing Ovix " + (isRdr ? "Rdr2" : "Gta") + "...";
             // Copy the ovix folder to the appdata folder
             string ovixPath = $"{extractPath}\\OvixBundle\\Ovix\\" + (isRdr ? "Rdr2" : "Gta").ToUpper();
-            try
+            if (Directory.Exists($"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper()))
             {
-               Directory.Move(ovixPath, $"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper());
+                makeBackup();
+                toolStripStatusLabel1.Text = "Deleting the current Ovix " + (isRdr ? "Rdr2" : "Gta") + " installation...";
+                if (Directory.Exists($"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper()))
+                {
+                    Directory.Delete($"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper(), true);
+                }
             }
-            catch (IOException)
-            {
-                Directory.Delete($"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper(), true);
-                Directory.Move(ovixPath, $"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper());
-            }
+            toolStripStatusLabel1.Text = "Moving the Ovix " + (isRdr ? "Rdr2" : "Gta") + " folder to the appdata folder...";
+            Directory.Move(ovixPath, $"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper());
+            restoreBackup();
 
+
+            toolStripStatusLabel1.Text = "Moving the Ovix" + (isRdr ? "Rdr2" : "Gta") + "Launcher.exe to the root of the appdata folder...";
             // Copy OvixGTALauncher.exe to the root of the appdata folder
             try
             {
@@ -112,6 +117,159 @@ namespace ovixInstaller
             shortcut.WorkingDirectory = Path.GetDirectoryName(targetFile);
             shortcut.Description = $"Shortcut for Ovix " + (isRdr ? "Rdr2" : "Gta").ToUpper() + " Launcher";
             shortcut.Save();
+        }
+
+        private void makeBackup()
+        {
+            toolStripStatusLabel1.Text = "Checking if Ovix " + (isRdr ? "Rdr2" : "Gta") + " is already installed...";
+            string ovixDataFolder = appdataPath + "\\" + (isRdr ? "Rdr2" : "Gta").ToUpper();
+            string backupPath = $"{appdataPath}\\backup";
+            if (Directory.Exists(backupPath))
+            {
+                Directory.Delete(backupPath, true);
+            }
+
+            if (File.Exists($"{ovixDataFolder}\\config.json") || Directory.Exists($"{ovixDataFolder}\\handling_profiles") || Directory.Exists($"{ovixDataFolder}\\headers") || Directory.Exists($"{ovixDataFolder}\\saved_outfits") || Directory.Exists($"{ovixDataFolder}\\translations") || File.Exists($"{ovixDataFolder}\\protection_settings.json"))
+            {
+                toolStripStatusLabel1.Text = "Ovix " + (isRdr ? "Rdr2" : "Gta") + " is already installed";
+                bool isFresh = MessageBox.Show("Ovix " + (isRdr ? "Rdr2" : "Gta").ToUpper() + " is already installed, would you like to keep your current configuration (yes) or do a fresh install (no)?\n\nwe do not guarantee that the ovix installation will work if you do this, if it doesnt please do a fresh install instead!", "Ovix is already installed", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+                if (!isFresh)
+                {
+                    toolStripStatusLabel1.Text = "Deleting the current configuration";
+                    Directory.Delete(ovixDataFolder, true);
+                    return;
+                }
+
+                toolStripStatusLabel1.Text = "informing the user about the backup";
+                MessageBox.Show("The installer will try to keep your current configuration.\n\nwe do not guarantee that the ovix installation will work if you do this, if it doesnt please do a fresh install instead!", "Ovix is already installed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+
+                // create a backup of the current config files
+                toolStripStatusLabel1.Text = "Creating a backup of the current configuration";
+                Directory.CreateDirectory(backupPath);
+                if (File.Exists($"{ovixDataFolder}\\config.json"))
+                {
+                    toolStripStatusLabel1.Text = "Creating a backup of the config.json file";
+                    File.Move($"{ovixDataFolder}\\config.json", $"{backupPath}\\config.json");
+                }
+
+                if (Directory.Exists($"{ovixDataFolder}\\handling_profiles"))
+                {
+                    toolStripStatusLabel1.Text = "Creating a backup of the handling_profiles folder";
+                    Directory.Move($"{ovixDataFolder}\\handling_profiles", $"{backupPath}\\handling_profiles");
+                }
+
+                if (Directory.Exists($"{ovixDataFolder}\\headers"))
+                {
+                    toolStripStatusLabel1.Text = "Creating a backup of the headers folder";
+                    Directory.Move($"{ovixDataFolder}\\headers", $"{backupPath}\\headers");
+                }
+
+                if (Directory.Exists($"{ovixDataFolder}\\saved_outfits"))
+                {
+                    toolStripStatusLabel1.Text = "Creating a backup of the saved_outfits folder";
+                    Directory.Move($"{ovixDataFolder}\\saved_outfits", $"{backupPath}\\saved_outfits");
+                }
+
+                if (Directory.Exists($"{ovixDataFolder}\\translations"))
+                {
+                    toolStripStatusLabel1.Text = "Creating a backup of the translations folder";
+                    Directory.Move($"{ovixDataFolder}\\translations", $"{backupPath}\\translations");
+                }
+
+                if (File.Exists($"{ovixDataFolder}\\protection_settings.json"))
+                {
+                    toolStripStatusLabel1.Text = "Creating a backup of the protection_settings.json file";
+                    File.Move($"{ovixDataFolder}\\protection_settings.json", $"{backupPath}\\protection_settings.json");
+                }
+
+                toolStripStatusLabel1.Text = "Backup created successfully";
+            }
+        }
+
+        private void restoreBackup()
+        {
+            string ovixDataFolder = appdataPath + "\\" + (isRdr ? "Rdr2" : "Gta").ToUpper();
+            string backupPath = $"{appdataPath}\\backup";
+            toolStripStatusLabel1.Text = "Checking if a backup exists";
+            if (!Directory.Exists(backupPath))
+            {
+                return;
+            }
+
+            toolStripStatusLabel1.Text = "Backup found! Restoring the backup";
+
+            if (File.Exists($"{backupPath}\\config.json"))
+            {
+                toolStripStatusLabel1.Text = "Restoring the config.json file";
+                // override the config.json file if it exists
+                if (File.Exists($"{ovixDataFolder}\\config.json"))
+                {
+                    File.Delete($"{ovixDataFolder}\\config.json");
+                }
+                File.Move($"{backupPath}\\config.json", $"{ovixDataFolder}\\config.json");
+            }
+
+            if (Directory.Exists($"{backupPath}\\handling_profiles"))
+            {
+                toolStripStatusLabel1.Text = "Restoring the handling_profiles folder";
+                // override the handling_profiles folder if it exists
+                if (Directory.Exists($"{ovixDataFolder}\\handling_profiles"))
+                {
+                    Directory.Delete($"{ovixDataFolder}\\handling_profiles", true);
+                }
+                Directory.Move($"{backupPath}\\handling_profiles", $"{ovixDataFolder}\\handling_profiles");
+            }
+
+            if (Directory.Exists($"{backupPath}\\headers"))
+            {
+                toolStripStatusLabel1.Text = "Restoring the headers folder";
+                // override the headers folder if it exists
+                if (Directory.Exists($"{ovixDataFolder}\\headers"))
+                {
+                    Directory.Delete($"{ovixDataFolder}\\headers", true);
+                }
+                Directory.Move($"{backupPath}\\headers", $"{ovixDataFolder}\\headers");
+            }
+
+            if (Directory.Exists($"{backupPath}\\saved_outfits"))
+            {
+                toolStripStatusLabel1.Text = "Restoring the saved_outfits folder";
+                // override the saved_outfits folder if it exists
+                if (Directory.Exists($"{ovixDataFolder}\\saved_outfits"))
+                {
+                    Directory.Delete($"{ovixDataFolder}\\saved_outfits", true);
+                }
+                Directory.Move($"{backupPath}\\saved_outfits", $"{ovixDataFolder}\\saved_outfits");
+            }
+
+            if (Directory.Exists($"{backupPath}\\translations"))
+            {
+                toolStripStatusLabel1.Text = "Restoring the translations folder";
+                // override the translations folder if it exists
+                if (Directory.Exists($"{ovixDataFolder}\\translations"))
+                {
+                    Directory.Delete($"{ovixDataFolder}\\translations", true);
+                }
+                Directory.Move($"{backupPath}\\translations", $"{ovixDataFolder}\\translations");
+            }
+
+            if (File.Exists($"{backupPath}\\protection_settings.json"))
+            {
+                toolStripStatusLabel1.Text = "Restoring the protection_settings.json file";
+                // override the protection_settings.json file if it exists
+                if (File.Exists($"{ovixDataFolder}\\protection_settings.json"))
+                {
+                    File.Delete($"{ovixDataFolder}\\protection_settings.json");
+                }
+                File.Move($"{backupPath}\\protection_settings.json", $"{ovixDataFolder}\\protection_settings.json");
+            }
+
+            // Delete the backup folder
+            toolStripStatusLabel1.Text = "Deleting the backup folder";
+            Directory.Delete(backupPath, true);
+
+            toolStripStatusLabel1.Text = "Backup restored successfully (we think)";
         }
 
         private void InstallCppRedist()
