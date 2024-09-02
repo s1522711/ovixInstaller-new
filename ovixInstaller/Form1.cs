@@ -12,7 +12,7 @@ namespace ovixInstaller
             InitializeComponent();
         }
 
-        const bool isRdr = true;
+        const bool isRdr = false;
         string appdataPath = $"{Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)}\\Ovix";
 
         private async void InstallBtn_Click(object sender, EventArgs e)
@@ -39,6 +39,14 @@ namespace ovixInstaller
                 await File.WriteAllBytesAsync(zipFilePath, fileBytes);
             }
 
+            if (!File.Exists(zipFilePath))
+            {
+                MessageBox.Show("Failed to download Ovix " + (isRdr ? "Rdr2" : "Gta") + "!\n\nMake sure your antivirus is off!", "ERROR!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                InstallBtn.Enabled = true;
+                toolStripStatusLabel1.Text = "Failed to download Ovix " + (isRdr ? "Rdr2" : "Gta") + "!";
+                return;
+            }
+
             toolStripStatusLabel1.Text = "Extracting Ovix " + (isRdr ? "Rdr2" : "Gta") + "...";
             // Unzip the file
             if (Directory.Exists(extractPath))
@@ -46,6 +54,14 @@ namespace ovixInstaller
                 Directory.Delete(extractPath, true);
             }
             ZipFile.ExtractToDirectory(zipFilePath, extractPath);
+
+            if (!File.Exists($"{extractPath}\\OvixBundle\\Ovix" + (isRdr ? "Rdr" : "Gta").ToUpper() + "Launcher.exe") || !File.Exists($"{extractPath}\\OvixBundle\\Ovix\\" + (isRdr ? "Rdr2" : "Gta").ToUpper() + "\\Ovix.dll"))
+            {
+                MessageBox.Show("Failed to extract Ovix " + (isRdr ? "Rdr2" : "Gta") + "!\n\nMake sure your antivirus is off!", "ERROR!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                InstallBtn.Enabled = true;
+                toolStripStatusLabel1.Text = "Failed to extract Ovix " + (isRdr ? "Rdr2" : "Gta") + "!";
+                return;
+            }
 
             // Delete the zip file
             File.Delete(zipFilePath);
@@ -80,6 +96,14 @@ namespace ovixInstaller
             }
             // Delete the extracted folder
             Directory.Delete(extractPath, true);
+
+            if (!File.Exists($"{appdataPath}\\Ovix" + (isRdr ? "Rdr2" : "Gta").ToUpper() + "Launcher.exe") || !Directory.Exists($"{appdataPath}\\" + (isRdr ? "Rdr2" : "Gta").ToUpper()))
+            {
+                MessageBox.Show("Failed to install Ovix " + (isRdr ? "Rdr2" : "Gta") + "!\n\nMake sure your antivirus is off!", "ERROR!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                InstallBtn.Enabled = true;
+                toolStripStatusLabel1.Text = "Failed to install Ovix " + (isRdr ? "Rdr2" : "Gta") + "!";
+                return;
+            }
 
             toolStripStatusLabel1.Text = "Creating shortcuts...";
             // Create a shortcut on the desktop
